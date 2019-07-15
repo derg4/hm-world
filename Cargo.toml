@@ -1,0 +1,15 @@
+[package]
+
+name = "hm_world"
+version = "0.0.1"
+authors = [ "Bill Dugger <duggers4@gmail.com>" ]
+
+[dependencies]
+cgmath   = "*"
+glium    = "*"
+glutin   = "*"
+image    = "*"
+rand     = "*"
+
+[profile.dev]
+opt-level = 3
