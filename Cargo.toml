@@ -5,11 +5,10 @@ version = "0.0.1"
 authors = [ "Bill Dugger <duggers4@gmail.com>" ]
 
 [dependencies]
-cgmath   = "*"
-glium    = "*"
-glutin   = "*"
-image    = "*"
-rand     = "*"
+cgmath   = "^0.17.0"
+glium    = "^0.25.1"
+image    = "^0.21.2"
+rand     = "^0.7"
 
 [profile.dev]
 opt-level = 3

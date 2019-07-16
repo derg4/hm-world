@@ -1,14 +1,16 @@
 #[macro_use]
 extern crate glium;
-use glium::glutin;
-use glium::Surface;
+use glium::{Display, Surface};
 use glium::texture::Texture2dArray;
 
-extern crate glutin;
-use glutin::event::{Event, WindowEvent};
+//extern crate glutin;
+use glium::glutin;
+use glutin::{ElementState, VirtualKeyCode};
+//use glutin::{Event, WindowEvent};
+/*use glutin::event::{Event, WindowEvent};
 use glutin::event_loop::{ControlFlow, EventLoop};
-use glutin::window::WindowBbuilder;
-use glutin::ContextBuilder;
+use glutin::window::WindowBuilder;
+use glutin::{ContextBuilder, VirtualKeyCode};*/
 // use glutin::{ElementState, VirtualKeyCode};
 
 use std::fs::File;
@@ -201,7 +203,7 @@ impl Default for GameState {
 
 fn duration_to_secs(duration: &Duration) -> f32 {
 	let secs: f32 = duration.as_secs() as f32;
-	let subsec: f32 = duration.subsec_nanos() as f32 / 1_000_000_000f32;
+	let subsec: f32 = duration.subsec_nanos() as f32 / 1_000_000_000_f32;
 	secs + subsec
 }
 
@@ -301,8 +303,7 @@ fn gen_sphere_model(deg_resolution: u32, radius: f32) -> Model {
 
 			// TODO support resolutions > 1?
 			let tex_id: f32 = if lat_deg >= min_lat && lat_deg < min_lat + rows &&
-			                     lon_deg >= min_lon &&
-			                     lon_deg < min_lon + cols {
+			                     lon_deg >= min_lon && lon_deg < min_lon + cols {
 				let row = lat_deg - min_lat;
 				let col = lon_deg - min_lon;
 				1f32 + (col as f32) + ((row * cols) as f32)
@@ -355,7 +356,7 @@ fn gen_sphere_model(deg_resolution: u32, radius: f32) -> Model {
 
 fn process_key_press(key_code: &VirtualKeyCode,
                      game_state: &mut GameState,
-                     display: &glium::backend::glutin_backend::GlutinFacade) {
+                     display: &Display) {
 	let key_bindings = &game_state.settings.key_bindings;
 	if *key_code == key_bindings.quit {
 		println!("User hit the quit key, exiting.");
@@ -494,7 +495,10 @@ fn process_keys_held(game_state: &mut GameState, time_since_last_frame: f32) {
 fn main() {
 	let cities = city::read_cities_file("src/cities.csv");
 
-	let display = glutin::WindowBuilder::new();
+	let mut el = glutin::EventsLoop::new();
+	let wb = glutin::WindowBuilder::new();
+	let cb = glutin::ContextBuilder::new();
+	let display = glium::Display::new(wb, cb, &el).unwrap();
 
 	let vert_shader_src = read_shader_file("src/vertex.glsl").expect("Failed to read vert shader");
 	let frag_shader_src = read_shader_file("src/fragment.glsl")
@@ -526,11 +530,7 @@ fn main() {
 		let this_frame = Instant::now();
 		let time_since_last_frame: f32 = duration_to_secs(&this_frame.duration_since(last_frame));
 
-		let (win_width, win_height): (u32, u32) = match display.get_window()
-			.map(|w| w.get_inner_size_pixels()) {
-			Some(Some((x, y))) => (x, y),
-			Some(None) | None => (1, 1), // If the window doesn't exist, imagine it's 1x1 for now...
-		};
+		let (win_width, win_height): (u32, u32) = display.get_framebuffer_dimensions();
 		let aspect_ratio = (win_width as f32) / (win_height as f32);
 
 		let mat_s: Matrix4<f32> = Matrix4::from_scale(1.0f32);
@@ -570,23 +570,32 @@ fn main() {
 		target.finish().unwrap();
 
 		// Do processing for new events (key presses, etc)
-		for ev in display.poll_events() {
+		el.poll_events(|ev| {
 			match ev {
-				glutin::Event::Closed => return,
-				glutin::Event::KeyboardInput(elem_state, _, Some(virt_key_code)) => {
-					match elem_state {
-						ElementState::Pressed => {
-							game_state.pressed_keys.insert(virt_key_code);
-							process_key_press(&virt_key_code, &mut game_state, &display);
+				glutin::Event::WindowEvent { event, .. } => match event {
+					glutin::WindowEvent::CloseRequested => return,
+					glutin::WindowEvent::KeyboardInput { input, .. } => {
+						match input.virtual_keycode {
+							Some(key_code) => {
+								match input.state {
+									ElementState::Pressed => {
+										game_state.pressed_keys.insert(key_code);
+										process_key_press(&key_code, &mut game_state, &display);
+									}
+									ElementState::Released => {
+										game_state.pressed_keys.remove(&key_code);
+									}
+								};
+							},
+							None => (),
 						}
-						ElementState::Released => {
-							game_state.pressed_keys.remove(&virt_key_code);
-						}
-					};
-				}
-				_ => {}
+					//elem_state, _, Some(virt_key_code)) => {
+					},
+					_ => (),
+				},
+				_ => (),
 			}
-		}
+		});
 
 		process_keys_held(&mut game_state, time_since_last_frame);
 
@@ -601,8 +610,7 @@ fn main() {
 
 		// Sleep for some time if we were to exceed max fps
 		let min_frame_duration =
-			Duration::new(0u64,
-			              ((1_000_000_000f32 / game_state.settings.max_fps) as u32));
+			Duration::new(0u64, (1_000_000_000f32 / game_state.settings.max_fps) as u32);
 		if let Some(time_to_sleep) = min_frame_duration.checked_sub(this_frame.elapsed()) {
 			std::thread::sleep(time_to_sleep);
 		}
