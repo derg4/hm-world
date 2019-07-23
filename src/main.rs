@@ -29,8 +29,8 @@ use rand::prelude::*;
 
 mod city;
 
-mod sphericalPoint;
-use sphericalPoint::SphericalPoint;
+mod coords;
+use coords::SphericalPoint;
 
 // ============================================================================
 // DATA STRUCTURES
@@ -263,10 +263,10 @@ fn gen_sphere_model(deg_resolution: u32, radius: f32) -> Model {
 	fn add_vertex_fn(lat: f32,
 	                 lon: f32,
 	                 tex: [f32; 3],
-	                 r: &f32,
+	                 r: f32,
 	                 rng: &mut ThreadRng,
 	                 verts: &mut Vec<Vertex>) {
-		let pos = SphericalPoint::new(r, &lat, &lon).to_point();
+		let pos = SphericalPoint::new(r, lat, lon).to_point();
 		let &(x, y, z) = pos.as_ref();
 
 		let vert = Vertex {
@@ -283,7 +283,7 @@ fn gen_sphere_model(deg_resolution: u32, radius: f32) -> Model {
 		add_vertex_fn((lat as f32) * lat_inc,
 		              (lon as f32) * lon_inc,
 		              tex,
-		              &radius,
+		              radius,
 		              &mut rng,
 		              verts);
 	};

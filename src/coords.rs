@@ -1,6 +1,6 @@
 extern crate cgmath;
 use std;
-use cgmath::{EuclideanSpace, InnerSpace, MetricSpace};
+use cgmath::{EuclideanSpace, MetricSpace};
 use cgmath::{Point3, Vector3};
 
 // All conventions used here are from
@@ -15,11 +15,11 @@ pub struct SphericalPoint {
 	pub phi: f32,
 }
 impl SphericalPoint {
-	pub fn new(radius: &f32, theta: &f32, phi: &f32) -> SphericalPoint {
+	pub fn new(radius: f32, theta: f32, phi: f32) -> SphericalPoint {
 		SphericalPoint {
-			radius: *radius,
-			theta: *theta,
-			phi: *phi,
+			radius: radius,
+			theta: theta,
+			phi: phi,
 		}
 	}
 
@@ -42,41 +42,55 @@ impl SphericalPoint {
 	// lat is in radians, -PI/2 (S) to PI/2 (N), inclusive
 	// long is in radians, -PI (W) to PI (E), inclusive
 	// TODO: TESTME
-	pub fn from_lat_long(radius: &f32, lat: &f32, long: &f32) -> SphericalPoint {
+	pub fn from_lat_long(radius: f32, lat: f32, long: f32) -> SphericalPoint {
 		SphericalPoint {
-			radius: *radius,
+			radius: radius,
 			theta: (std::f32::consts::FRAC_PI_2 - lat),
 			phi: (std::f32::consts::PI - long),
 		}
 	}
-	pub fn to_lat_long(&self) -> (f32, f32) {
+	pub fn as_lat_long(&self) -> LatLong {
 		let lat = std::f32::consts::FRAC_PI_2 - self.theta;
 		let long = std::f32::consts::PI - self.phi;
-		(lat, long)
+		LatLong::new(lat, long)
 	}
 
 	pub fn is_ok(&self) -> bool {
 		!(self.radius.is_nan() || self.theta.is_nan() || self.phi.is_nan())
 	}
+}
 
-	// Computes the great circle distance between two spherical points:
-	// 1. self
-	// 2. another point with the same radius as self, and o_theta, and o_phi
+pub struct LatLong {
+	pub lat: f32,
+	pub long: f32,
+}
+impl LatLong {
+	pub fn new(latitude: f32, longitude: f32) -> LatLong {
+		LatLong {
+			lat: latitude,
+			long: longitude,
+		}
+	}
+
+	pub fn as_sph_point(&self, radius: f32) -> SphericalPoint {
+		SphericalPoint {
+			radius: radius,
+			theta: (std::f32::consts::FRAC_PI_2 - self.lat),
+			phi: (std::f32::consts::PI - self.long),
+		}
+	}
+
+	// Returns the great circle distance in radians between self and other
 	//
 	// Uses Vincenty formula from https://en.wikipedia.org/wiki/Great-circle_distance
-	// TODO: TESTME
-	// TODO: Great ellipse instead of great circle distance?
-	// See: https://en.wikipedia.org/wiki/Vincenty's_formulae
-	pub fn great_circle_distance(&self, o_theta: &f32, o_phi: &f32) -> f32 {
-		let other = SphericalPoint::new(&self.radius, o_theta, o_phi);
-		let (lat_s, long_s) = self.to_lat_long();
-		let (lat_o, long_o) = other.to_lat_long();
-		let long_delta = (long_s - long_o).abs();
+	pub fn great_circle_distance(&self, other: &LatLong) -> f32 {
+		let long_delta = (self.long - other.long).abs();
 
-		self.radius *
-		((lat_o.cos() * long_delta.sin()).powi(2) +
-		 (lat_s.cos() * lat_o.sin() - lat_s.sin() * lat_o.cos() * long_delta.cos()).powi(2))
+		((other.lat.cos() * long_delta.sin()).powi(2) +
+		 (self.lat.cos() * other.lat.sin() -
+		  self.lat.sin() * other.lat.cos() * long_delta.cos()).powi(2))
 			.sqrt()
-			.atan2(lat_s.sin() * lat_o.sin() + lat_s.cos() * lat_o.cos() * long_delta.cos())
+			.atan2(self.lat.sin() * other.lat.sin() +
+			       self.lat.cos() * other.lat.cos() * long_delta.cos())
 	}
 }
