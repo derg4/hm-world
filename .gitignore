@@ -2,3 +2,4 @@ Cargo.lock
 target
 TelleneBig*
 *.pyc
+*.rustfmt
