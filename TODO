@@ -1,0 +1,51 @@
+Rearchitect existing code
+Fix click-and-drag panning
+Figure out why everything looks washed out
+Add option to just have 100% ambient lighting (no sun)
+
+Implement custom maps:
+	Be able to specify one or more files to serve as atlases, with min/max lat/long
+	Wishlist: support different map projections
+Implement cities:
+	Make them "visible" on the globe, dots with labels
+	Different sizes of city should have different levels of visibility/icon
+	Be able to do CRUD actions on them in the gui
+	Should be able to save whole worlds in a file (including atlas, cities + other custom data)
+Implement roads:
+	Make them "visible" on the globe, straight lines (maybe different? Series of lines? Curves?)
+	Different levels of road should have different levels of visibility/pattern
+	Be able to do CRUD actions on them in the gui
+Implement trade routes:
+	Different cities should have a production/demand of different resources
+	Should dynamically produce a price for each resource in each city
+	Should have the option of viewing the globe as a heatmap of prices for each resource
+	Should be able to dynamically find a price of each item
+	Cities should have tariffs/taxes/option to prevent trade in/out of their trade routes
+Implement time:
+	Should be able to choose speed time advances, move "sun" around by day/night
+	Should be able to wind time backwards
+	Should be able to introduce temporary supply/demand in an area:
+		So if the PCs spend lots of gold in an area (say steel, on swords/armor):
+			Prices of goods go up (slightly) in general (greater supply of gold)
+			Prices of steel (esp swords/armor) should be raised (less supply)
+		If PCs dump lots of goods (say steel from swords/armor) in an area:
+			Prices of everything else should (slightly) decrease (less supply of gold)
+			Prices of steel and steel goods (esp. swords/armor) should decrease
+	Random events should temporarily affect supply/demand in an area:
+		Cattle/crop disease, good/bad harvest, war, etc...
+		Also should be able to manually generate these, or override automatic ones!
+	Temp supply/demand of any type should abate as traders naturally move it to an equilibrium
+	Should be able to graph past prices of resources/goods by time, project future prices
+Add a party tracker:
+	Track movement of party on map, and see past movement...
+Implement monsters:
+	Add areas monsters live
+	When party is in monsters' areas, chance to encounter them (notify when time moves)
+	Wishlist: Add biomes and monster migration, towns/cities slowly kill nearby ones
+Implement banditry:
+	Add a risk of banditry:
+		Risk should increase on active trade routes
+		Towns/cities should provide zone of influence based on size
+			Risk of banditry should decrease based on influence of cities
+		Trade routes should decrease banditry based on size of town/city connected
+		Trade routes should increase banditry based on length
