@@ -1,0 +1,32 @@
+Entities (Enterprise Business Rules)
+	The basest, most general data structures and objects that don't depend on
+	anything. Make up the core of the logic of the application. Should not
+	need to change when external things change.
+--------------------------------------------------------------------------------
+Use Cases (Application Business Rules)
+	Processes input from MVC, and implements the application use cases.
+	Orchestrates data flow to/from entities, and lower layers.
+	This is where use case logic resides.
+--------------------------------------------------------------------------------
+Controller (Interface Adapter)
+	Takes input from user, talks to View, sends/receives "Model" data in/up to
+	Use Cases layer
+
+View (Interface Adapter)
+	Takes info from Controller (in form of abstract objects) converts to OpenGL
+	data structures and calls glium/glutin to render them
+
+Gateway (Interface Adapter)
+	Transforms application data back and forth to database data.
+	Handles the details of interacting with the database.
+--------------------------------------------------------------------------------
+(Frameworks & Drivers)
+	... glutin wrapper?
+	... database code?
+
+
+Entities
+UseCases<IController>
+Controller<IView>
+View<OpenGL>
+Gateway<Database>
