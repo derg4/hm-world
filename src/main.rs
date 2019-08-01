@@ -23,10 +23,10 @@ extern crate image;
 extern crate rand;
 use rand::prelude::*;
 
-mod city;
-
-mod coords;
-use coords::SphericalPoint;
+mod entities;
+use entities::city;
+use entities::coords;
+use entities::coords::SphericalPoint;
 
 // ============================================================================
 // DATA STRUCTURES
