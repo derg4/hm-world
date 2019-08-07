@@ -4,5 +4,10 @@ pub use self::glpresenter::GLPresenter;
 mod view;
 pub use self::view::View;
 
-mod vertex;
-pub use self::vertex::Vertex;
+mod mesh;
+pub use self::mesh::{Mesh, Vertex};
+
+mod objects;
+pub use self::objects::{
+	AmbientLight, Camera, MeshObject, Rotatable, Scalable, Translatable, WorldLight,
+};
