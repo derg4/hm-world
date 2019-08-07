@@ -8,7 +8,9 @@ authors = [ "Bill Dugger <duggers4@gmail.com>" ]
 cgmath   = "^0.17.0"
 glium    = "^0.25.1"
 image    = "^0.21.2"
+log      = "^0.4.8"
 rand     = "^0.7"
+toml     = "^0.5"
 
 [profile.dev]
 opt-level = 3

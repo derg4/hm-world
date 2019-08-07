@@ -1,0 +1,9 @@
+[world]
+name = "Tellene"
+
+[map]
+filename = "TelleneBig.PNG"
+min_lat = -45.0
+max_lat = 45.0
+min_long = -45.0
+max_long = 45.0

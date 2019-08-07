@@ -1,2 +1,7 @@
 pub mod city;
-pub mod coords;
+
+mod coords;
+pub use self::coords::{LatLong, SphericalPoint};
+
+mod map;
+pub use self::map::{Map, MapBounds, MapError};

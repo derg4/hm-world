@@ -5,6 +5,8 @@ Add option to just have 100% ambient lighting (no sun)
 
 Implement custom maps:
 	Be able to specify one or more files to serve as atlases, with min/max lat/long
+	Move atlas splitting utility from 'convert' CLI to rust, see image::imageops and imageproc
+		With image::imageops, should be able to crop, overlay images, etc... should work
 	Wishlist: support different map projections
 Implement cities:
 	Make them "visible" on the globe, dots with labels

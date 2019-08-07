@@ -1,0 +1,8 @@
+For the following modules, each is allowed to reference only the ones from the
+lines above it.  This ensures no circular dependencies exist.
+
+entities
+hm-world -> entities
+presenter -> hm-world, entities
+view -> presenter, hm-world
+database -> hm-world, entities

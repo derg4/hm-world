@@ -3,3 +3,5 @@ target
 TelleneBig*
 *.pyc
 *.rustfmt
+*.vim
+*.vim!

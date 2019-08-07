@@ -10,12 +10,12 @@ use std;
 // 0 <= theta <= PI
 // 0 <= phi < 2*PI
 pub struct SphericalPoint {
-	pub radius: f32,
-	pub theta: Rad<f32>,
-	pub phi: Rad<f32>,
+	pub radius: f64,
+	pub theta: Rad<f64>,
+	pub phi: Rad<f64>,
 }
 impl SphericalPoint {
-	pub fn new(radius: f32, theta: Rad<f32>, phi: Rad<f32>) -> SphericalPoint {
+	pub fn new(radius: f64, theta: Rad<f64>, phi: Rad<f64>) -> SphericalPoint {
 		SphericalPoint {
 			radius: radius,
 			theta: theta,
@@ -23,8 +23,8 @@ impl SphericalPoint {
 		}
 	}
 
-	pub fn from_point(point: &Point3<f32>) -> SphericalPoint {
-		let radius: f32 = point.to_vec().magnitude();
+	pub fn from_point(point: &Point3<f64>) -> SphericalPoint {
+		let radius: f64 = point.to_vec().magnitude();
 		SphericalPoint {
 			radius: radius,
 			theta: Rad::acos(point.y / radius),
@@ -32,8 +32,8 @@ impl SphericalPoint {
 		}
 	}
 
-	pub fn from_vec(vec: &Vector3<f32>) -> SphericalPoint {
-		let radius: f32 = vec.magnitude();
+	pub fn from_vec(vec: &Vector3<f64>) -> SphericalPoint {
+		let radius: f64 = vec.magnitude();
 		SphericalPoint {
 			radius: radius,
 			theta: Rad::acos(vec.y / radius),
@@ -41,22 +41,22 @@ impl SphericalPoint {
 		}
 	}
 
-	pub fn to_point(&self) -> Point3<f32> {
-		let x: f32 = self.radius * self.theta.sin() * self.phi.sin();
-		let y: f32 = self.radius * self.theta.cos();
-		let z: f32 = self.radius * self.theta.sin() * self.phi.cos();
+	pub fn to_point(&self) -> Point3<f64> {
+		let x: f64 = self.radius * self.theta.sin() * self.phi.sin();
+		let y: f64 = self.radius * self.theta.cos();
+		let z: f64 = self.radius * self.theta.sin() * self.phi.cos();
 		Point3::new(x, y, z)
 	}
 
-	pub fn to_vec(&self) -> Vector3<f32> {
-		let x: f32 = self.radius * self.theta.sin() * self.phi.sin();
-		let y: f32 = self.radius * self.theta.cos();
-		let z: f32 = self.radius * self.theta.sin() * self.phi.cos();
+	pub fn to_vec(&self) -> Vector3<f64> {
+		let x: f64 = self.radius * self.theta.sin() * self.phi.sin();
+		let y: f64 = self.radius * self.theta.cos();
+		let z: f64 = self.radius * self.theta.sin() * self.phi.cos();
 		Vector3::new(x, y, z)
 	}
 
 	// TODO: TESTME
-	pub fn from_lat_long(radius: f32, lat: Rad<f32>, long: Rad<f32>) -> SphericalPoint {
+	pub fn from_lat_long(radius: f64, lat: Rad<f64>, long: Rad<f64>) -> SphericalPoint {
 		SphericalPoint {
 			radius: radius,
 			theta: (Rad::turn_div_4() - lat),
@@ -76,19 +76,20 @@ impl SphericalPoint {
 
 // lat is in radians, -PI/2 (S) to PI/2 (N), inclusive
 // long is in radians, -PI (W) to PI (E), inclusive
+#[derive(Clone, Debug)]
 pub struct LatLong {
-	pub lat: Rad<f32>,
-	pub long: Rad<f32>,
+	pub lat: Rad<f64>,
+	pub long: Rad<f64>,
 }
 impl LatLong {
-	pub fn new(latitude: Rad<f32>, longitude: Rad<f32>) -> LatLong {
+	pub fn new(latitude: Rad<f64>, longitude: Rad<f64>) -> LatLong {
 		LatLong {
 			lat: latitude,
 			long: longitude,
 		}
 	}
 
-	pub fn as_sph_point(&self, radius: f32) -> SphericalPoint {
+	pub fn as_sph_point(&self, radius: f64) -> SphericalPoint {
 		SphericalPoint {
 			radius: radius,
 			theta: (Rad::turn_div_4() - self.lat),
@@ -99,16 +100,15 @@ impl LatLong {
 	// Returns the great circle distance in radians between self and other
 	//
 	// Uses Vincenty formula from https://en.wikipedia.org/wiki/Great-circle_distance
-	pub fn great_circle_distance(&self, other: &LatLong) -> Rad<f32> {
+	pub fn great_circle_distance(&self, other: &LatLong) -> Rad<f64> {
 		let long_delta = Rad((self.long - other.long).0.abs());
 
-		Rad(((other.lat.cos() * long_delta.sin()).powi(2)
-			+ (self.lat.cos() * other.lat.sin()
-				- self.lat.sin() * other.lat.cos() * long_delta.cos())
-			.powi(2))
-		.sqrt()
-		.atan2(
-			self.lat.sin() * other.lat.sin() + self.lat.cos() * other.lat.cos() * long_delta.cos(),
-		))
+		Rad(((other.lat.cos() * long_delta.sin()).powi(2) +
+		     (self.lat.cos() * other.lat.sin() -
+		      self.lat.sin() * other.lat.cos() * long_delta.cos())
+				.powi(2))
+			.sqrt()
+			.atan2(self.lat.sin() * other.lat.sin() +
+			       self.lat.cos() * other.lat.cos() * long_delta.cos()))
 	}
 }
