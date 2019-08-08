@@ -57,8 +57,8 @@ impl Database for FileDatabase {
 
 		//TODO check degrees/radians
 		let map_bounds = MapBounds {
-			min: LatLong::new(Deg(min_lat).into(), Deg(min_long).into()),
-			max: LatLong::new(Deg(max_lat).into(), Deg(max_long).into()),
+			min: LatLong::new(Deg(min_lat), Deg(min_long)),
+			max: LatLong::new(Deg(max_lat), Deg(max_long)),
 		};
 		let map_file_path = Path::new(&self.config_file).with_file_name(map_filename).to_str()
 			.ok_or(DatabaseError::IOError(std::io::Error::new(std::io::ErrorKind::NotFound,
@@ -70,5 +70,9 @@ impl Database for FileDatabase {
 			name: name.to_string(),
 			map: Box::new(map),
 		})
+	}
+
+	fn save(&self) {
+		error!("Database save unimplemented!");
 	}
 }

@@ -9,5 +9,5 @@ pub use self::mesh::{Mesh, Vertex};
 
 mod objects;
 pub use self::objects::{
-	AmbientLight, Camera, MeshObject, Rotatable, Scalable, Translatable, WorldLight,
+	AmbientLight, LockedCamera, FreeCamera, MeshObject, Rotatable, Scalable, Translatable, WorldLight,
 };

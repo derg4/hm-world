@@ -26,6 +26,14 @@ pub enum MapError {
 	IOError(std::io::Error),
 	ImageError(image::ImageError),
 }
+impl fmt::Display for MapError {
+	fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+		write!(f, "{}", match self {
+			MapError::IOError(e) => e as &fmt::Display,
+			MapError::ImageError(e) => e as &fmt::Display,
+		})
+	}
+}
 
 #[derive(Clone)]
 pub struct Map {

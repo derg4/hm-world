@@ -82,12 +82,22 @@ pub struct LatLong {
 	pub long: Rad<f64>,
 }
 impl LatLong {
-	pub fn new(latitude: Rad<f64>, longitude: Rad<f64>) -> LatLong {
+	pub fn new<A: Into<Rad<f64>>>(latitude: A, longitude: A) -> LatLong {
 		LatLong {
-			lat: latitude,
-			long: longitude,
+			lat: latitude.into(),
+			long: longitude.into(),
 		}
 	}
+
+	// pub fn normalize(&mut self) { //TODO
+	// match self.lat {
+	// Rad(f64::MIN)...-Rad::turn_div_4() =>
+	// }
+	// }
+
+	// pub fn add_lat<A: Into<Rad<f64>>>(&mut self, latitude: A) {
+	// self.lat += latitude.into();
+	// }
 
 	pub fn as_sph_point(&self, radius: f64) -> SphericalPoint {
 		SphericalPoint {

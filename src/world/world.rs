@@ -8,4 +8,5 @@ pub struct WorldState {
 
 pub trait World {
 	fn get_state(&self) -> &WorldState;
+	fn save(&self);
 }

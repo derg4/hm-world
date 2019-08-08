@@ -12,6 +12,7 @@ pub struct ConcreteWorld {
 impl ConcreteWorld {
 	pub fn new(database: Box<Database>) -> Result<ConcreteWorld, DatabaseError> {
 		let state = database.load()?;
+		info!("World loaded");
 
 		Ok(ConcreteWorld {
 			database: database,
@@ -22,5 +23,9 @@ impl ConcreteWorld {
 impl World for ConcreteWorld {
 	fn get_state(&self) -> &WorldState {
 		&self.state
+	}
+
+	fn save(&self) {
+		self.database.save();
 	}
 }
