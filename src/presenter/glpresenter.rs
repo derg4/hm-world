@@ -6,7 +6,8 @@ use crate::world::{World, WorldState};
 use glium::glutin::dpi::LogicalPosition;
 use glium::glutin::{MouseButton, VirtualKeyCode, WindowEvent};
 
-use cgmath::{Deg, Point3, Vector3, Vector4};
+use cgmath::prelude::*;
+use cgmath::{Deg, Point3, Vector3};
 
 use std::collections::{HashMap, HashSet};
 use std::time::{Duration, Instant};
@@ -20,7 +21,7 @@ enum InputType {
 	Mouse(MouseButton),
 }
 
-#[derive(Clone, Copy, Debug)]
+#[derive(Hash, Eq, PartialEq, Clone, Copy, Debug)]
 enum ContinualAction {
 	MoveForward,
 	MoveBackward,
@@ -37,7 +38,7 @@ enum InstantAction {
 	//ToggleDebug,
 	MoveLight,
 	//ToggleCursorGrab,
-	//ToggleCameraLock,
+	ToggleCameraLock,
 	Log,
 }
 
@@ -51,13 +52,18 @@ enum ActionType {
 struct Settings {
 	bindings: HashMap<InputType, ActionType>,
 	max_fps: f64,
-	move_forward_speed: f64,
-	move_backward_speed: f64,
-	strafe_speed: f64,
-	scroll_speed: f64,
-	zoom_speed: f64,
+
+	world_center: Point3<f64>,
+	world_radius: f64,
+
+	light_frac_ambient: f64,
 	light_distance: f64,
+
+	move_speed: f64,
+	pan_speed: f64,
+	zoom_speed: f64,
 	fov: Deg<f64>,
+
 	quitting: bool,
 }
 impl Default for Settings {
@@ -76,9 +82,9 @@ impl Default for Settings {
 			(Key(VirtualKeyCode::LShift), ActionType::Continual(MoveFast)),
 			(Key(VirtualKeyCode::Escape), ActionType::Instant(Quit)),
 			//(Key(VirtualKeyCode::Q), ActionType::Instant(ToggleDebug)),
-			(Key(VirtualKeyCode::E), ActionType::Instant(MoveLight)),
+			(Key(VirtualKeyCode::L), ActionType::Instant(MoveLight)),
 			//(Key(VirtualKeyCode::G), ActionType::Instant(ToggleCursorGrab)),
-			//(Key(VirtualKeyCode::C), ActionType::Instant(ToggleCameraLock)),
+			(Key(VirtualKeyCode::C), ActionType::Instant(ToggleCameraLock)),
 			(Mouse(MouseButton::Left), ActionType::Instant(Log)),
 			(Mouse(MouseButton::Middle), ActionType::Instant(Log)),
 			(Mouse(MouseButton::Right), ActionType::Instant(Log)),
@@ -90,13 +96,18 @@ impl Default for Settings {
 		Settings {
 			bindings: bindings,
 			max_fps: 60_f64,
-			move_forward_speed: 1_f64,
-			move_backward_speed: 1_f64,
-			strafe_speed: 1_f64,
-			scroll_speed: 1_f64,
-			zoom_speed: 2_f64,
+
+			world_center: Point3::new(0_f64, 0_f64, 0_f64),
+			world_radius: 1_f64,
+
+			light_frac_ambient: 0.05_f64,
 			light_distance: 10_000_f64,
+
+			move_speed: 1_f64,
+			pan_speed: 1_f64,
+			zoom_speed: 2_f64,
 			fov: Deg(90_f64),
+
 			quitting: false,
 		}
 	}
@@ -117,37 +128,42 @@ fn conv_image_to_raw_image(image: &image::DynamicImage) -> glium::texture::RawIm
 pub struct GLPresenter {
 	view: Box<View>,
 	world: Box<World>,
-	inputs_held: HashSet<InputType>,
+
 	settings: Settings,
+	inputs_held: HashSet<InputType>,
 	objects: Vec<MeshObject>,
+
 	ambient_light: AmbientLight,
 	world_light: WorldLight,
+
 	camera: Camera,
 }
 
 impl GLPresenter {
 	pub fn new(view: Box<View>, world: Box<World>) -> GLPresenter {
-		let frac_ambient = 0.05_f64;
-		let frac_world = 1_f64 - frac_ambient;
+		let settings: Settings = Default::default();
 
 		GLPresenter {
 			view: view,
 			world: world,
 			inputs_held: HashSet::new(),
-			settings: Default::default(),
 			objects: Vec::new(),
 			ambient_light: AmbientLight {
-				color: Vector4::new(frac_ambient, frac_ambient, frac_ambient, 1_f64),
+				color: (Vector3::new(1_f64, 1_f64, 1_f64) * settings.light_frac_ambient).extend(1_f64),
 			},
 			world_light: WorldLight {
-				pos: Point3::new(1000_f64, 0_f64, 0_f64),
-				color: Vector4::new(frac_world, frac_world, frac_world, 1_f64),
+				pos: settings.world_center + Vector3::unit_z() * settings.light_distance,
+				color: (Vector3::new(1_f64, 1_f64, 1_f64) * (1_f64 - settings.light_frac_ambient)).extend(1_f64),
 			},
 			camera: Camera::new(
-				Point3::new(2_f64, 0_f64, 0_f64),
-				-Vector3::unit_x(),
+				settings.world_center + Vector3::unit_z() * 2_f64 * settings.world_radius,
+				-Vector3::unit_z(),
 				Vector3::unit_y(),
+				settings.move_speed,
+				settings.pan_speed,
+				settings.zoom_speed,
 			),
+			settings: settings,
 		}
 	}
 
@@ -158,7 +174,7 @@ impl GLPresenter {
 		self.objects.push(MeshObject::new(Mesh::gen_sphere_mesh(
 			self.view.get_facade(),
 			1_u32,
-			1_f64,
+			self.settings.world_radius,
 		)));
 
 		let mut fps_track_start = Instant::now();
@@ -183,7 +199,7 @@ impl GLPresenter {
 			frame_count += 1;
 			let fps_track_secs = duration_to_secs(&fps_track_start.elapsed());
 			if fps_track_secs > 1_f64 {
-				info!("FPS: {}", frame_count as f64 / fps_track_secs);
+				debug!("FPS: {}", frame_count as f64 / fps_track_secs);
 				fps_track_start = Instant::now();
 				frame_count = 0;
 			}
@@ -228,7 +244,7 @@ impl GLPresenter {
 				..
 			} => {
 				let input = InputType::Key(key);
-				info!("KeyboardInput: {:?} {:?}", key, state);
+				debug!("KeyboardInput: {:?} {:?}", key, state);
 				match state {
 					ElementState::Pressed => {
 						self.process_input(&input);
@@ -241,7 +257,7 @@ impl GLPresenter {
 			}
 			WindowEvent::MouseInput { state, button, .. } => {
 				let input = InputType::Mouse(button);
-				info!("MouseInput: {:?} {:?}", button, state);
+				debug!("MouseInput: {:?} {:?}", button, state);
 				match state {
 					ElementState::Pressed => {
 						self.process_input(&input);
@@ -254,7 +270,7 @@ impl GLPresenter {
 			}
 			// TODO: Shouldn't skip over the process_input pipeline but...
 			//       Need a more generic way to implement zoom for scroll wheel.
-			//       No other input has an "amount"... and I want to preserve the pixel delta
+			//       No other input has an "amount"... and I want to preserve the delta
 			WindowEvent::MouseWheel { delta, .. } => {
 				let dist = match delta {
 					MouseScrollDelta::LineDelta(_, vert) => vert as f64 * 15_f64,
@@ -262,7 +278,7 @@ impl GLPresenter {
 				};
 				let zoom_factor = 1_f64 - dist / 300_f64; // TODO calibrate, add config
 				info!("MouseWheel: {:?} ({}, {})", delta, dist, zoom_factor);
-				self.zoom(zoom_factor);
+				//TODO call camera move for the zoom
 			}
 			//TODO WindowEvent::CursorMoved { position, .. } => {
 			//...
@@ -282,8 +298,14 @@ impl GLPresenter {
 		info!("Instant action fired: {:?}", action);
 		match action {
 			InstantAction::Quit => self.settings.quitting = true,
-			InstantAction::MoveLight => (),
+			InstantAction::MoveLight => self.world_light.pos = self.settings.world_center +
+				(self.camera.get_pos() - self.settings.world_center)
+				.normalize_to(self.settings.light_distance),
 			InstantAction::Log => (),
+			InstantAction::ToggleCameraLock => match self.camera.is_locked() {
+				true => self.camera.unlock(),
+				false => self.camera.lock(self.settings.world_center, self.settings.world_radius * 1.00001_f64),
+			}
 		}
 	}
 
@@ -291,28 +313,34 @@ impl GLPresenter {
 	// frame. Used for actions that happen continually, like moving the camera.
 	fn process_held_inputs(&mut self, frame_secs: f64) {
 		let inputs_vec: Vec<InputType> = self.inputs_held.iter().map(|&it| it).collect();
+		let mut actions: HashSet<ContinualAction> = HashSet::new();
+
 		for &input in inputs_vec.iter() {
 			if let Some(&ActionType::Continual(action)) = self.settings.bindings.get(&input) {
-				self.process_continual_action(&action, frame_secs);
+				actions.insert(action);
 			}
 		}
+		self.process_continual_actions(&actions, frame_secs)
 	}
-	fn process_continual_action(&mut self, action: &ContinualAction, frame_secs: f64) {
-		info!("Continual action fired: {:?} ({:?}s)", action, frame_secs);
-		match action {
-			ContinualAction::MoveForward => (),
-			ContinualAction::MoveBackward => (),
-			ContinualAction::MoveLeft => (),
-			ContinualAction::MoveRight => (),
-			ContinualAction::MoveUp => (),
-			ContinualAction::MoveDown => (),
-			ContinualAction::MoveFast => (), // TODO:Continual modifiers?
-		};
-	}
+	fn process_continual_actions(&mut self, actions: &HashSet<ContinualAction>, frame_secs: f64) {
+		let mut move_vec: Vector3<f64> = Vector3::zero();
+		let mut move_mult = 1_f64;
 
-	// Zooms in on the globe by a given factor (will appear as 'factor' times larger)
-	fn zoom(&mut self, factor: f64) {
-		info!("Zoom! {}", factor); //TODO
+		for action in actions.iter() {
+			debug!("Continual action fired: {:?} ({:?}s)", action, frame_secs);
+			match action {
+				ContinualAction::MoveForward => move_vec -= Vector3::unit_z(),
+				ContinualAction::MoveBackward => move_vec += Vector3::unit_z(),
+				ContinualAction::MoveLeft => move_vec -= Vector3::unit_x(),
+				ContinualAction::MoveRight => move_vec += Vector3::unit_x(),
+				ContinualAction::MoveUp => move_vec += Vector3::unit_y(),
+				ContinualAction::MoveDown => move_vec -= Vector3::unit_y(),
+				ContinualAction::MoveFast => move_mult *= 2_f64,
+			};
+		}
+		if move_vec.magnitude2() >= 0.01_f64 {
+			self.camera.move_cam(move_vec.normalize_to(move_mult), frame_secs);
+		}
 	}
 
 	fn draw(&self) {
