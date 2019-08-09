@@ -3,6 +3,7 @@ name = "Tellene"
 
 [map]
 filename = "TelleneBig.PNG"
+missing = "tellene_missing.png"
 min_lat = -45.0
 max_lat = 45.0
 min_long = -45.0

@@ -1,7 +1,7 @@
 use super::Mesh;
-use crate::entities::LatLong;
+use crate::entities::SphericalPoint;
 
-use cgmath::{Angle, Matrix3, Matrix4, Point3, Rad, SquareMatrix, Vector3, Vector4};
+use cgmath::{Angle, InnerSpace, Matrix4, Point2, Point3, Rad, SquareMatrix, Vector3, Vector4};
 
 /// Representing any object in the game world which it makes sense to be able to scale
 pub trait Scalable {
@@ -28,7 +28,7 @@ pub struct MeshObject {
 	translation_mat: Matrix4<f64>,
 }
 impl MeshObject {
-	fn new(mesh: Mesh) -> MeshObject {
+	pub fn new(mesh: Mesh) -> MeshObject {
 		MeshObject {
 			mesh: mesh,
 			scale_mat: Matrix4::identity(),
@@ -36,7 +36,7 @@ impl MeshObject {
 			translation_mat: Matrix4::identity(),
 		}
 	}
-	fn get_transformation(&self) -> Matrix4<f64> {
+	pub fn model_mat(&self) -> Matrix4<f64> {
 		self.scale_mat * self.rotation_mat * self.translation_mat
 	}
 }
@@ -80,90 +80,76 @@ pub struct AmbientLight {
 /// A point light with a location in the world
 #[derive(Debug)]
 pub struct WorldLight {
-	pub position: Point3<f64>,
+	pub pos: Point3<f64>,
 	pub color: Vector4<f64>,
 }
 impl Translatable for WorldLight {
 	fn incr_translate(&mut self, v: Vector3<f64>) -> &mut Self {
-		self.position = self.position + v;
+		self.pos = self.pos + v;
 		self
 	}
 	fn set_translate(&mut self, v: Vector3<f64>) -> &mut Self {
-		self.position = Point3::new(v.x, v.y, v.z);
-		self
-	}
-}
-
-/// The representation of a camera: translate moves the eye, rotate changes the look direction
-#[derive(Debug)]
-pub struct FreeCamera {
-	pub position: Point3<f64>,
-	initial_direction: Vector3<f64>,
-	pub direction: Vector3<f64>,
-	pub up: Vector3<f64>,
-}
-impl Rotatable for FreeCamera {
-	fn incr_rotate<A: Into<Rad<f64>>>(&mut self, axis: Vector3<f64>, angle: A) -> &mut Self {
-		self.direction = Matrix3::from_axis_angle(axis, angle) * self.direction;
-		self
-	}
-	fn set_rotate<A: Into<Rad<f64>>>(&mut self, axis: Vector3<f64>, angle: A) -> &mut Self {
-		self.direction = Matrix3::from_axis_angle(axis, angle) * self.initial_direction;
-		self
-	}
-}
-impl Translatable for FreeCamera {
-	fn incr_translate(&mut self, v: Vector3<f64>) -> &mut Self {
-		self.position = self.position + v;
-		self
-	}
-	fn set_translate(&mut self, v: Vector3<f64>) -> &mut Self {
-		self.position = Point3::new(v.x, v.y, v.z);
+		self.pos = Point3::new(v.x, v.y, v.z);
 		self
 	}
 }
 
 #[derive(Debug)]
-pub struct LockedCamera {
-	pub coords: LatLong,
-	pub up: Vector3<f64>,
-	pub dist_from_center: f64,
-	globe_center: Point3<f64>,
-	globe_radius: f64,
-	min_dist_from_surface: f64,
-	max_latitude: Rad<f64>,
+pub struct Camera {
+	pos: Point3<f64>,
+	dir: Vector3<f64>,
+	up: Vector3<f64>,
 }
-impl LockedCamera {
-	// TODO build camera based on a reference to a world or something?
-	fn new(coords: LatLong, up: Vector3<f64>, dist_from_center: f64, globe_center: Point3<f64>, globe_radius: f64, min_dist_from_surface: f64, max_latitude: Rad<f64>) -> LockedCamera {
-		LockedCamera {
-			coords: coords,
+impl Camera {
+	pub fn new(pos: Point3<f64>, dir: Vector3<f64>, up: Vector3<f64>) -> Camera {
+		Camera {
+			pos: pos,
+			dir: dir,
 			up: up,
-			dist_from_center: dist_from_center,
-			globe_center: globe_center,
-			globe_radius: globe_radius,
-			min_dist_from_surface: min_dist_from_surface,
-			max_latitude: max_latitude,
 		}
 	}
-	fn add_latitude<A: Into<Rad<f64>>>(&mut self, add_lat: A) {
-		let sum_lat = self.coords.lat + add_lat.into();
-		if sum_lat > self.max_latitude {
-			self.coords.lat = self.max_latitude;
-		}
-		else if sum_lat < -self.max_latitude {
-			self.coords.lat = -self.max_latitude;
-		}
-		else {
-			self.coords.lat = sum_lat;
-		}
+	pub fn view_mat(&self) -> Matrix4<f64> {
+		Matrix4::look_at(self.pos, self.pos + self.dir, self.up)
 	}
-	fn add_longitude<A: Into<Rad<f64>>>(&mut self, add_long: A) {
-		self.coords.long = (self.coords.long + add_long.into()).normalize_signed();
+
+	/*fn move(&mut self, vec: Vector3<f64>) {
+		self.pos += vec;
 	}
-	fn zoom(&mut self, factor: f64) {
-		self.dist_from_center = ((self.dist_from_center - self.globe_radius) / factor)
-			.min(self.min_dist_from_surface) + self.globe_radius;
+	fn rotate(&mut self, angles: Point2<Rad<f64>>) {
+		// TODO self.dir = Matrix3::from_axis_angle(axis, angle) * self.dir;
+	}*/
+	pub fn rotate_about_point(&mut self, about: Point3<f64>, angles: Point2<Rad<f64>>) {
+		let mut sph_disp = SphericalPoint::from_vec(&(self.pos - about));
+
+		sph_disp.theta += angles.y;
+		let min_theta = Rad(0.00001_f64); // magic number
+		let max_theta = Rad::turn_div_2() - min_theta;
+		if sph_disp.theta < min_theta {
+			sph_disp.theta = min_theta;
+		} else if sph_disp.theta > max_theta {
+			sph_disp.theta = max_theta;
+		}
+
+		sph_disp.phi = (sph_disp.phi + angles.x).normalize();
+
+		if !sph_disp.is_ok() {
+			// TODO set to a normal default
+			error!(
+				"Resetting camera, bad spherical coord values: r {} | theta {:?} | phi {:?}",
+				sph_disp.radius, sph_disp.theta, sph_disp.phi
+			);
+			sph_disp.radius = 2_f64;
+			sph_disp.theta = Rad::turn_div_4();
+			sph_disp.phi = Rad(0_f64);
+		}
+
+		let new_disp = sph_disp.to_vec();
+
+		self.pos = about + new_disp;
+		self.dir = -new_disp.normalize();
 	}
-	//fn config_free_camera(&self, free_camera: &mut FreeCamera) { }
+	pub fn zoom(&mut self, to_point: Point3<f64>, to_dist: f64, factor: f64) {
+		let zoom_target = to_point + to_dist * (self.pos - to_point).normalize();
+		self.pos = zoom_target + (self.pos - zoom_target) / factor;
+	}
 }

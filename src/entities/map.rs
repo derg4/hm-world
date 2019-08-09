@@ -28,10 +28,14 @@ pub enum MapError {
 }
 impl fmt::Display for MapError {
 	fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-		write!(f, "{}", match self {
-			MapError::IOError(e) => e as &fmt::Display,
-			MapError::ImageError(e) => e as &fmt::Display,
-		})
+		write!(
+			f,
+			"{}",
+			match self {
+				MapError::IOError(e) => e as &fmt::Display,
+				MapError::ImageError(e) => e as &fmt::Display,
+			}
+		)
 	}
 }
 
@@ -39,23 +43,33 @@ impl fmt::Display for MapError {
 pub struct Map {
 	file_name: String,
 	pub image: DynamicImage,
+	pub missing_image: DynamicImage,
 	pub bounds: MapBounds,
 }
 impl Map {
-	pub fn new(file_name: &str, bounds: MapBounds) -> Result<Map, MapError> {
+	pub fn new(file_name: &str, missing_file: &str, bounds: MapBounds) -> Result<Map, MapError> {
 		let file = File::open(file_name).map_err(|e| MapError::IOError(e))?;
 		let image = image::load(BufReader::with_capacity(8192, file), image::PNG)
+			.map_err(|e| MapError::ImageError(e))?;
+
+		let missing_file = File::open(missing_file).map_err(|e| MapError::IOError(e))?;
+		let missing_image = image::load(BufReader::with_capacity(8192, missing_file), image::PNG)
 			.map_err(|e| MapError::ImageError(e))?;
 
 		Ok(Map {
 			file_name: file_name.to_string(),
 			image: image,
-			bounds: bounds
+			missing_image: missing_image,
+			bounds: bounds,
 		})
 	}
 }
 impl fmt::Debug for Map {
 	fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-		write!(f, "Map{{image: <image from {}>, bounds: {:?}}}", self.file_name, self.bounds)
+		write!(
+			f,
+			"Map{{image: <image from {}>, bounds: {:?}}}",
+			self.file_name, self.bounds
+		)
 	}
 }

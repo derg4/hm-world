@@ -1,10 +1,11 @@
 extern crate cgmath;
+#[macro_use]
 extern crate glium;
 extern crate image;
 
 #[macro_use]
 extern crate log;
-use log::{Record, Level, LevelFilter, Metadata};
+use log::{Level, LevelFilter, Metadata, Record};
 
 extern crate rand;
 extern crate toml;
@@ -58,11 +59,10 @@ fn main() {
 		Err(err) => {
 			error!("Main: Error initializing view: {}", err);
 			return;
-		},
+		}
 	};
 
 	let mut presenter = GLPresenter::new(Box::new(view), Box::new(world));
-
 	presenter.event_loop();
 
 	info!("Main is returning");

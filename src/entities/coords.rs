@@ -1,7 +1,6 @@
 use cgmath::prelude::*;
 use cgmath::Rad;
 use cgmath::{Point3, Vector3};
-use std;
 
 // All conventions used here are from
 // https://en.wikipedia.org/wiki/Spherical_coordinate_system#Conventions
@@ -113,12 +112,13 @@ impl LatLong {
 	pub fn great_circle_distance(&self, other: &LatLong) -> Rad<f64> {
 		let long_delta = Rad((self.long - other.long).0.abs());
 
-		Rad(((other.lat.cos() * long_delta.sin()).powi(2) +
-		     (self.lat.cos() * other.lat.sin() -
-		      self.lat.sin() * other.lat.cos() * long_delta.cos())
-				.powi(2))
-			.sqrt()
-			.atan2(self.lat.sin() * other.lat.sin() +
-			       self.lat.cos() * other.lat.cos() * long_delta.cos()))
+		Rad(((other.lat.cos() * long_delta.sin()).powi(2)
+			+ (self.lat.cos() * other.lat.sin()
+				- self.lat.sin() * other.lat.cos() * long_delta.cos())
+			.powi(2))
+		.sqrt()
+		.atan2(
+			self.lat.sin() * other.lat.sin() + self.lat.cos() * other.lat.cos() * long_delta.cos(),
+		))
 	}
 }
