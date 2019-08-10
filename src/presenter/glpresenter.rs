@@ -142,6 +142,14 @@ pub struct GLPresenter {
 impl GLPresenter {
 	pub fn new(view: Box<View>, world: Box<World>) -> GLPresenter {
 		let settings: Settings = Default::default();
+		let mut camera = Camera::new(
+				settings.world_center + Vector3::unit_z() * 2_f64 * settings.world_radius,
+				-Vector3::unit_z(),
+				Vector3::unit_y(),
+				settings.move_speed,
+				settings.pan_speed,
+				settings.zoom_speed);
+		camera.lock(settings.world_center, settings.world_radius);
 
 		GLPresenter {
 			view: view,
@@ -155,14 +163,7 @@ impl GLPresenter {
 				pos: settings.world_center + Vector3::unit_z() * settings.light_distance,
 				color: (Vector3::new(1_f64, 1_f64, 1_f64) * (1_f64 - settings.light_frac_ambient)).extend(1_f64),
 			},
-			camera: Camera::new(
-				settings.world_center + Vector3::unit_z() * 2_f64 * settings.world_radius,
-				-Vector3::unit_z(),
-				Vector3::unit_y(),
-				settings.move_speed,
-				settings.pan_speed,
-				settings.zoom_speed,
-			),
+			camera: camera,
 			settings: settings,
 		}
 	}
@@ -304,7 +305,7 @@ impl GLPresenter {
 			InstantAction::Log => (),
 			InstantAction::ToggleCameraLock => match self.camera.is_locked() {
 				true => self.camera.unlock(),
-				false => self.camera.lock(self.settings.world_center, self.settings.world_radius * 1.00001_f64),
+				false => self.camera.lock(self.settings.world_center, self.settings.world_radius),
 			}
 		}
 	}
