@@ -2,11 +2,18 @@ use crate::entities::{LatLong, Map, MapBounds};
 use crate::world::{Database, DatabaseError, WorldState};
 
 use std::fs::File;
-use std::io::Read;
+use std::io::{BufReader, Read};
 use std::path::Path;
 
 use cgmath::Deg;
-use toml::Value; // XXX BAD!
+use image::DynamicImage;
+use toml::Value;
+
+fn get_image_from_file(file_name: &str) -> Result<DynamicImage, DatabaseError> {
+	let file = File::open(file_name).map_err(|e| DatabaseError::IOError(e))?;
+	Ok(image::load(BufReader::with_capacity(8192, file), image::PNG)
+		.map_err(|e| DatabaseError::ImageError(e))?)
+}
 
 pub struct FileDatabase {
 	config_file: String,
@@ -103,6 +110,7 @@ impl Database for FileDatabase {
 				"Parent dir of config",
 			)))?
 			.to_string();
+		let map_image = get_image_from_file(&map_file_path)?;
 		let missing_file_path = Path::new(&self.config_file)
 			.with_file_name(map_missing)
 			.to_str()
@@ -111,8 +119,8 @@ impl Database for FileDatabase {
 				"Parent dir of config",
 			)))?
 			.to_string();
-		let map = Map::new(&map_file_path, &missing_file_path, map_bounds)
-			.map_err(|e| DatabaseError::MapError(e))?;
+		let missing_image = get_image_from_file(&missing_file_path)?;
+		let map = Map::new(name, map_image, missing_image, map_bounds);
 
 		Ok(WorldState {
 			name: name.to_string(),

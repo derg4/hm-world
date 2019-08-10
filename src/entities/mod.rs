@@ -4,4 +4,4 @@ mod coords;
 pub use self::coords::{LatLong, SphericalPoint};
 
 mod map;
-pub use self::map::{Map, MapBounds, MapError};
+pub use self::map::{Map, MapBounds};

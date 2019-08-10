@@ -22,28 +22,35 @@ impl MeshObject {
 		}
 	}
 
+	//TODO: remove these attributes when dynamic game objects are introduced
+	#[allow(dead_code)] // scale/rotate/translate aren't used because world is static atm
 	fn incr_scale(&mut self, x: f64, y: f64, z: f64) -> &mut Self {
 		self.scale_mat = self.scale_mat * Matrix4::from_nonuniform_scale(x, y, z);
 		self
 	}
+	#[allow(dead_code)] // scale/rotate/translate aren't used because world is static atm
 	fn set_scale(&mut self, x: f64, y: f64, z: f64) -> &mut Self {
 		self.scale_mat = Matrix4::from_nonuniform_scale(x, y, z);
 		self
 	}
 
+	#[allow(dead_code)] // scale/rotate/translate aren't used because world is static atm
 	fn incr_rotate<A: Into<Rad<f64>>>(&mut self, axis: Vector3<f64>, angle: A) -> &mut Self {
 		self.rotation_mat = self.rotation_mat * Matrix4::from_axis_angle(axis, angle);
 		self
 	}
+	#[allow(dead_code)] // scale/rotate/translate aren't used because world is static atm
 	fn set_rotate<A: Into<Rad<f64>>>(&mut self, axis: Vector3<f64>, angle: A) -> &mut Self {
 		self.rotation_mat = Matrix4::from_axis_angle(axis, angle);
 		self
 	}
 
+	#[allow(dead_code)] // scale/rotate/translate aren't used because world is static atm
 	fn incr_translate(&mut self, v: Vector3<f64>) -> &mut Self {
 		self.translation_mat = self.translation_mat * Matrix4::from_translation(v);
 		self
 	}
+	#[allow(dead_code)] // scale/rotate/translate aren't used because world is static atm
 	fn set_translate(&mut self, v: Vector3<f64>) -> &mut Self {
 		self.translation_mat = Matrix4::from_translation(v);
 		self
