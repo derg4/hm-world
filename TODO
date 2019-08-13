@@ -7,6 +7,7 @@ Implement custom maps:
 	Be able to specify one or more files to serve as atlases, with min/max lat/long
 	Move atlas splitting utility from 'convert' CLI to rust, see image::imageops and imageproc
 		With image::imageops, should be able to crop, overlay images, etc... should work
+		https://docs.rs/image/0.22.1/image/imageops/fn.overlay.html (top cropped to bot size)
 	Wishlist: support different map projections
 Implement cities:
 	Make them "visible" on the globe, dots with labels

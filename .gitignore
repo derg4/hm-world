@@ -5,3 +5,4 @@ TelleneBig*
 *.rustfmt
 *.vim
 *.vim!
+tex_*

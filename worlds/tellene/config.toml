@@ -3,8 +3,9 @@ name = "Tellene"
 
 [map]
 filename = "TelleneBig.PNG"
-missing = "tellene_missing.png"
-min_lat = -45.0
-max_lat = 45.0
-min_long = -45.0
-max_long = 45.0
+min_lat = -5.5
+max_lat = 5.5
+min_long = -5.5
+max_long = 5.5
+missing_texture = "tellene_missing.png"
+texture_size_deg = 2

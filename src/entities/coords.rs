@@ -1,6 +1,8 @@
 use cgmath::prelude::*;
-use cgmath::Rad;
+use cgmath::{Deg, Rad};
 use cgmath::{Point3, Vector3};
+
+use std::ops::{Add, Sub};
 
 // All conventions used here are from
 // https://en.wikipedia.org/wiki/Spherical_coordinate_system#Conventions
@@ -73,8 +75,8 @@ impl SphericalPoint {
 	}
 }
 
-// lat is in radians, -PI/2 (S) to PI/2 (N), inclusive
-// long is in radians, -PI (W) to PI (E), inclusive
+// lat is in radians, [-PI/2 (S), PI/2 (N)]
+// long is in radians, [-PI (W), PI (E))
 #[derive(Clone, Debug)]
 pub struct LatLong {
 	pub lat: Rad<f64>,
@@ -88,15 +90,17 @@ impl LatLong {
 		}
 	}
 
-	// pub fn normalize(&mut self) { //TODO
-	// match self.lat {
-	// Rad(f64::MIN)...-Rad::turn_div_4() =>
-	// }
-	// }
+	pub fn normalize(&self) -> LatLong {
+		let Rad(lat) = self.lat;
+		let new_lat = Rad(lat.min(std::f64::consts::FRAC_PI_2).max(-std::f64::consts::FRAC_PI_2));
 
-	// pub fn add_lat<A: Into<Rad<f64>>>(&mut self, latitude: A) {
-	// self.lat += latitude.into();
-	// }
+		// TODO: doesn't cover cases where long is < -2*pi
+		let Rad(long) = self.long;
+		let new_long = Rad((long + std::f64::consts::PI) % (2_f64 * std::f64::consts::PI) -
+		                   std::f64::consts::PI);
+
+		LatLong::new(new_lat, new_long)
+	}
 
 	pub fn as_sph_point(&self, radius: f64) -> SphericalPoint {
 		SphericalPoint {
@@ -104,6 +108,18 @@ impl LatLong {
 			theta: (Rad::turn_div_4() - self.lat),
 			phi: (Rad::turn_div_2() - self.long),
 		}
+	}
+
+	pub fn as_rad_floats(&self) -> (f64, f64) {
+		let (Rad(lat), Rad(long)) = (self.lat, self.long);
+		(lat, long)
+	}
+
+	pub fn as_deg_floats(&self) -> (f64, f64) {
+		let deg_lat: Deg<f64> = self.lat.into();
+		let deg_long: Deg<f64> = self.long.into();
+		let (Deg(lat), Deg(long)) = (deg_lat, deg_long);
+		(lat, long)
 	}
 
 	// Returns the great circle distance in radians between self and other
@@ -119,5 +135,19 @@ impl LatLong {
 			.sqrt()
 			.atan2(self.lat.sin() * other.lat.sin() +
 			       self.lat.cos() * other.lat.cos() * long_delta.cos()))
+	}
+}
+impl Add for LatLong {
+	type Output = Self;
+
+	fn add(self, other: Self) -> Self::Output {
+		LatLong::new(self.lat + other.lat, self.long + other.long).normalize()
+	}
+}
+impl Sub for LatLong {
+	type Output = Self;
+
+	fn sub(self, other: Self) -> Self::Output {
+		LatLong::new(self.lat - other.lat, self.long - other.long).normalize()
 	}
 }

@@ -7,7 +7,7 @@ authors = [ "Bill Dugger <duggers4@gmail.com>" ]
 [dependencies]
 cgmath   = "^0.17.0"
 glium    = "^0.25.1"
-image    = "^0.21.2"
+image    = "^0.22.0"
 log      = "^0.4.8"
 rand     = "^0.7"
 toml     = "^0.5"

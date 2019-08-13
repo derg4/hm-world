@@ -1,11 +1,10 @@
-use crate::entities::{LatLong, Map, MapBounds};
+use crate::entities::{Map, MapBounds};
 use crate::world::{Database, DatabaseError, WorldState};
 
 use std::fs::File;
 use std::io::{BufReader, Read};
 use std::path::Path;
 
-use cgmath::Deg;
 use image::DynamicImage;
 use toml::Value;
 
@@ -36,6 +35,26 @@ impl FileDatabase {
 			.parse::<Value>()
 			.map_err(|e| DatabaseError::ConfigParseError(Box::new(e)))
 	}
+
+	fn value_get<'a>(value: &'a Value, key: &str) -> Result<&'a Value, DatabaseError> {
+		Ok(value.get(key).ok_or(DatabaseError::ConfigMissingValue)?)
+	}
+
+	fn value_get_str<'a>(value: &'a Value, key: &str) -> Result<&'a str, DatabaseError> {
+		Ok(Self::value_get(value, key)?.as_str().ok_or(DatabaseError::ConfigValueWrongType)?)
+	}
+
+	fn value_get_int(value: &Value, key: &str) -> Result<i64, DatabaseError> {
+		Ok(Self::value_get(value, key)?.as_integer().ok_or(DatabaseError::ConfigValueWrongType)?)
+	}
+
+	fn value_get_float(value: &Value, key: &str) -> Result<f64, DatabaseError> {
+		Ok(Self::value_get(value, key)?.as_float().ok_or(DatabaseError::ConfigValueWrongType)?)
+	}
+
+	fn value_get_bool(value: &Value, key: &str) -> Result<bool, DatabaseError> {
+		Ok(Self::value_get(value, key)?.as_bool().ok_or(DatabaseError::ConfigValueWrongType)?)
+	}
 }
 impl Database for FileDatabase {
 	fn load(&self) -> Result<WorldState, DatabaseError> {
@@ -46,64 +65,27 @@ impl Database for FileDatabase {
 		// duplicate the format in code there?
 
 		// World table info
-		let world_table = value
-			.get("world")
-			.ok_or(DatabaseError::ConfigMissingValue)?;
-		let name_val = world_table
-			.get("name")
-			.ok_or(DatabaseError::ConfigMissingValue)?;
-		let name = name_val
-			.as_str()
-			.ok_or(DatabaseError::ConfigValueWrongType)?;
+		let world = Self::value_get(&value, "world")?;
+		let name = Self::value_get_str(&world, "name")?;
 
 		// Map table info
-		let map_table = value.get("map").ok_or(DatabaseError::ConfigMissingValue)?;
-		let map_filename_val = map_table
-			.get("filename")
-			.ok_or(DatabaseError::ConfigMissingValue)?;
-		let map_filename = map_filename_val
-			.as_str()
-			.ok_or(DatabaseError::ConfigValueWrongType)?;
-		let map_missing_val = map_table
-			.get("missing")
-			.ok_or(DatabaseError::ConfigMissingValue)?;
-		let map_missing = map_missing_val
-			.as_str()
-			.ok_or(DatabaseError::ConfigValueWrongType)?;
+		let map = Self::value_get(&value, "map")?;
+		let map_filename = Self::value_get_str(&map, "filename")?;
+		let min_lat = Self::value_get_float(&map, "min_lat")?;
+		let max_lat = Self::value_get_float(&map, "max_lat")?;
+		let min_long = Self::value_get_float(&map, "min_long")?;
+		let max_long = Self::value_get_float(&map, "max_long")?;
+		let missing_texture_file = Self::value_get_str(&map, "missing_texture")?;
+		let texture_size_deg = Self::value_get_int(&map, "texture_size_deg")?;
 
-		let min_lat_val = map_table
-			.get("min_lat")
-			.ok_or(DatabaseError::ConfigMissingValue)?;
-		let min_lat = min_lat_val
-			.as_float()
-			.ok_or(DatabaseError::ConfigValueWrongType)?;
-		let max_lat_val = map_table
-			.get("max_lat")
-			.ok_or(DatabaseError::ConfigMissingValue)?;
-		let max_lat = max_lat_val
-			.as_float()
-			.ok_or(DatabaseError::ConfigValueWrongType)?;
-
-		let min_long_val = map_table
-			.get("min_long")
-			.ok_or(DatabaseError::ConfigMissingValue)?;
-		let min_long = min_long_val
-			.as_float()
-			.ok_or(DatabaseError::ConfigValueWrongType)?;
-		let max_long_val = map_table
-			.get("max_long")
-			.ok_or(DatabaseError::ConfigMissingValue)?;
-		let max_long = max_long_val
-			.as_float()
-			.ok_or(DatabaseError::ConfigValueWrongType)?;
-
-		//TODO check degrees/radians
 		let map_bounds = MapBounds {
-			min: LatLong::new(Deg(min_lat), Deg(min_long)),
-			max: LatLong::new(Deg(max_lat), Deg(max_long)),
+			min_lat: min_lat,
+			max_lat: max_lat,
+			min_long: min_long,
+			max_long: max_long,
 		};
-		let map_file_path = Path::new(&self.config_file)
-			.with_file_name(map_filename)
+		let config_path = Path::new(&self.config_file);
+		let map_file_path = config_path.with_file_name(map_filename)
 			.to_str()
 			.ok_or(DatabaseError::IOError(std::io::Error::new(
 				std::io::ErrorKind::NotFound,
@@ -111,8 +93,8 @@ impl Database for FileDatabase {
 			)))?
 			.to_string();
 		let map_image = get_image_from_file(&map_file_path)?;
-		let missing_file_path = Path::new(&self.config_file)
-			.with_file_name(map_missing)
+		let missing_file_path = config_path
+			.with_file_name(missing_texture_file)
 			.to_str()
 			.ok_or(DatabaseError::IOError(std::io::Error::new(
 				std::io::ErrorKind::NotFound,
@@ -120,7 +102,24 @@ impl Database for FileDatabase {
 			)))?
 			.to_string();
 		let missing_image = get_image_from_file(&missing_file_path)?;
-		let map = Map::new(name, map_image, missing_image, map_bounds);
+		let mut map = Map::new(&name, map_image, missing_image, map_bounds);
+		info!("Loaded map!");
+
+		let textures_dir = config_path.with_file_name(&format!("tex_{}", texture_size_deg));
+		let dir_builder = std::fs::DirBuilder::new();
+		if dir_builder.create(&textures_dir).is_err() {
+			warn!("Dir builder couldn't create {:?}", textures_dir);
+		}
+		info!("foo");
+
+		let map_textures = map.generate_textures(texture_size_deg as u32);
+		for (map_piece_key, texture) in map_textures.iter() {
+			let texture_filename = format!("{:+04}_{:+04}.png", map_piece_key.min_long, map_piece_key.min_lat);
+			let texture_file_path = textures_dir.join(texture_filename);
+			if texture.save_with_format(&texture_file_path, image::ImageFormat::PNG).is_err() {
+				warn!("Texture {:?} could not be saved", texture_file_path);
+			}
+		}
 
 		Ok(WorldState {
 			name: name.to_string(),
