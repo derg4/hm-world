@@ -112,6 +112,9 @@ impl Database for FileDatabase {
 		}
 		info!("foo");
 
+		// TODO: Skip generating textures if textures_dir exists, generate a Map based on
+		// the images in that folder instead of the large image (which we shouldn't open)
+		// Add a CLI option in main to bypass this and force regen the textures
 		let map_textures = map.generate_textures(texture_size_deg as u32);
 		for (map_piece_key, texture) in map_textures.iter() {
 			let texture_filename = format!("{:+04}_{:+04}.png", map_piece_key.min_long, map_piece_key.min_lat);

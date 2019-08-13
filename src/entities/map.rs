@@ -62,8 +62,8 @@ impl Map {
 
 		// Goal in each iteration of the inner loop is to get a texture which is
 		// tex_size_deg degrees wide and high, the size of self.missing_image
-		println!("Image w={}, h={}", self.image.width(), self.image.height());
-		print!("Generating textures (may take a while)");
+		debug!("Image w={}, h={}", self.image.width(), self.image.height());
+		info!("Generating textures (may take a while)");
 		for long_incr in min_long_incr..=max_long_incr {
 			// Get x dimensions (in image-space pixels) for the subimage we'll grab
 			let subimage_min_long = (long_incr * tex_size_deg as i32) as f64;
@@ -83,7 +83,7 @@ impl Map {
 				else { (max as u32, 0_u32) }
 			};
 			let subimage_width_px = subimage_max_x - subimage_min_x;
-			println!("long incr={}, minlong x={}+{}, maxlong x={}, subimage w={}, img width={}",
+			debug!("long incr={}, minlong x={}+{}, maxlong x={}, subimage w={}, img width={}",
 				long_incr,
 				subimage_min_x,
 				offset_min_x,
@@ -114,7 +114,7 @@ impl Map {
 				let subimage_height_px = subimage_max_y - subimage_min_y;
 
 				// Grab a view into image based on dimensions above
-				println!("Subimage: minx={}, miny={}, w={}, h={}",
+				debug!("Subimage: minx={}, miny={}, w={}, h={}",
 					subimage_min_x, subimage_min_y, subimage_width_px, subimage_height_px);
 				let subimage = self.image.sub_image(subimage_min_x, subimage_min_y, subimage_width_px, subimage_height_px);
 
@@ -141,7 +141,6 @@ impl Map {
 					min_long: long_incr * tex_size_deg as i32,
 				};
 				textures.insert(map_piece_key, missing_img);
-				print!(".");
 			}
 		}
 		textures
