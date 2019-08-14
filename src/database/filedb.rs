@@ -10,8 +10,10 @@ use toml::Value;
 
 fn get_image_from_file(file_name: &str) -> Result<DynamicImage, DatabaseError> {
 	let file = File::open(file_name).map_err(|e| DatabaseError::IOError(e))?;
-	Ok(image::load(BufReader::with_capacity(8192, file), image::PNG)
-		.map_err(|e| DatabaseError::ImageError(e))?)
+	Ok(
+		image::load(BufReader::with_capacity(8192, file), image::PNG)
+			.map_err(|e| DatabaseError::ImageError(e))?,
+	)
 }
 
 pub struct FileDatabase {
@@ -41,19 +43,21 @@ impl FileDatabase {
 	}
 
 	fn value_get_str<'a>(value: &'a Value, key: &str) -> Result<&'a str, DatabaseError> {
-		Ok(Self::value_get(value, key)?.as_str().ok_or(DatabaseError::ConfigValueWrongType)?)
+		Ok(Self::value_get(value, key)?
+			.as_str()
+			.ok_or(DatabaseError::ConfigValueWrongType)?)
 	}
 
 	fn value_get_int(value: &Value, key: &str) -> Result<i64, DatabaseError> {
-		Ok(Self::value_get(value, key)?.as_integer().ok_or(DatabaseError::ConfigValueWrongType)?)
+		Ok(Self::value_get(value, key)?
+			.as_integer()
+			.ok_or(DatabaseError::ConfigValueWrongType)?)
 	}
 
 	fn value_get_float(value: &Value, key: &str) -> Result<f64, DatabaseError> {
-		Ok(Self::value_get(value, key)?.as_float().ok_or(DatabaseError::ConfigValueWrongType)?)
-	}
-
-	fn value_get_bool(value: &Value, key: &str) -> Result<bool, DatabaseError> {
-		Ok(Self::value_get(value, key)?.as_bool().ok_or(DatabaseError::ConfigValueWrongType)?)
+		Ok(Self::value_get(value, key)?
+			.as_float()
+			.ok_or(DatabaseError::ConfigValueWrongType)?)
 	}
 }
 impl Database for FileDatabase {
@@ -78,14 +82,10 @@ impl Database for FileDatabase {
 		let missing_texture_file = Self::value_get_str(&map, "missing_texture")?;
 		let texture_size_deg = Self::value_get_int(&map, "texture_size_deg")?;
 
-		let map_bounds = MapBounds {
-			min_lat: min_lat,
-			max_lat: max_lat,
-			min_long: min_long,
-			max_long: max_long,
-		};
+		let map_bounds = MapBounds::new(min_lat, max_lat, min_long, max_long);
 		let config_path = Path::new(&self.config_file);
-		let map_file_path = config_path.with_file_name(map_filename)
+		let map_file_path = config_path
+			.with_file_name(map_filename)
 			.to_str()
 			.ok_or(DatabaseError::IOError(std::io::Error::new(
 				std::io::ErrorKind::NotFound,
@@ -117,9 +117,15 @@ impl Database for FileDatabase {
 		// Add a CLI option in main to bypass this and force regen the textures
 		let map_textures = map.generate_textures(texture_size_deg as u32);
 		for (map_piece_key, texture) in map_textures.iter() {
-			let texture_filename = format!("{:+04}_{:+04}.png", map_piece_key.min_long, map_piece_key.min_lat);
+			let texture_filename = format!(
+				"{:+04}_{:+04}.png",
+				map_piece_key.min_long, map_piece_key.min_lat
+			);
 			let texture_file_path = textures_dir.join(texture_filename);
-			if texture.save_with_format(&texture_file_path, image::ImageFormat::PNG).is_err() {
+			if texture
+				.save_with_format(&texture_file_path, image::ImageFormat::PNG)
+				.is_err()
+			{
 				warn!("Texture {:?} could not be saved", texture_file_path);
 			}
 		}

@@ -1,4 +1,4 @@
-pub mod city;
+//pub mod city;
 
 mod coords;
 pub use self::coords::{LatLong, SphericalPoint};

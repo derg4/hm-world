@@ -1,6 +1,8 @@
+#![allow(dead_code)]
+// TODO clean up dead code annotations
+
 use cgmath::prelude::*;
-use cgmath::{Deg, Rad};
-use cgmath::{Point3, Vector3};
+use cgmath::{Point3, Rad, Vector3};
 
 use std::ops::{Add, Sub};
 
@@ -23,7 +25,6 @@ impl SphericalPoint {
 			phi: phi,
 		}
 	}
-
 	pub fn from_point(point: &Point3<f64>) -> SphericalPoint {
 		let radius: f64 = point.to_vec().magnitude();
 		SphericalPoint {
@@ -92,12 +93,15 @@ impl LatLong {
 
 	pub fn normalize(&self) -> LatLong {
 		let Rad(lat) = self.lat;
-		let new_lat = Rad(lat.min(std::f64::consts::FRAC_PI_2).max(-std::f64::consts::FRAC_PI_2));
+		let new_lat = Rad(lat
+			.min(std::f64::consts::FRAC_PI_2)
+			.max(-std::f64::consts::FRAC_PI_2));
 
 		// TODO: doesn't cover cases where long is < -2*pi
 		let Rad(long) = self.long;
-		let new_long = Rad((long + std::f64::consts::PI) % (2_f64 * std::f64::consts::PI) -
-		                   std::f64::consts::PI);
+		let new_long = Rad(
+			(long + std::f64::consts::PI) % (2_f64 * std::f64::consts::PI) - std::f64::consts::PI,
+		);
 
 		LatLong::new(new_lat, new_long)
 	}
@@ -110,31 +114,20 @@ impl LatLong {
 		}
 	}
 
-	pub fn as_rad_floats(&self) -> (f64, f64) {
-		let (Rad(lat), Rad(long)) = (self.lat, self.long);
-		(lat, long)
-	}
-
-	pub fn as_deg_floats(&self) -> (f64, f64) {
-		let deg_lat: Deg<f64> = self.lat.into();
-		let deg_long: Deg<f64> = self.long.into();
-		let (Deg(lat), Deg(long)) = (deg_lat, deg_long);
-		(lat, long)
-	}
-
 	// Returns the great circle distance in radians between self and other
 	//
 	// Uses Vincenty formula from https://en.wikipedia.org/wiki/Great-circle_distance
 	pub fn great_circle_distance(&self, other: &LatLong) -> Rad<f64> {
 		let long_delta = Rad((self.long - other.long).0.abs());
 
-		Rad(((other.lat.cos() * long_delta.sin()).powi(2) +
-		     (self.lat.cos() * other.lat.sin() -
-		      self.lat.sin() * other.lat.cos() * long_delta.cos())
-				.powi(2))
-			.sqrt()
-			.atan2(self.lat.sin() * other.lat.sin() +
-			       self.lat.cos() * other.lat.cos() * long_delta.cos()))
+		Rad(((other.lat.cos() * long_delta.sin()).powi(2)
+			+ (self.lat.cos() * other.lat.sin()
+				- self.lat.sin() * other.lat.cos() * long_delta.cos())
+			.powi(2))
+		.sqrt()
+		.atan2(
+			self.lat.sin() * other.lat.sin() + self.lat.cos() * other.lat.cos() * long_delta.cos(),
+		))
 	}
 }
 impl Add for LatLong {

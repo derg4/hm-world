@@ -13,13 +13,11 @@ pub struct City {
 }
 impl std::fmt::Debug for City {
 	fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
-		write!(f,
-		       "{}: pop {}, country {}, lat {:?}, long {:?}",
-		       self.name,
-		       self.population,
-		       self.country,
-		       self.coords.lat,
-		       self.coords.long)?;
+		write!(
+			f,
+			"{}: pop {}, country {}, lat {:?}, long {:?}",
+			self.name, self.population, self.country, self.coords.lat, self.coords.long
+		)?;
 		Ok(())
 	}
 }
@@ -37,8 +35,10 @@ pub fn read_cities_file(file_name: &str) -> Vec<City> {
 			name: String::from(columns[0]),
 			population: columns[1].parse::<u32>().unwrap(),
 			country: String::from(columns[2]),
-			coords: LatLong::new(Rad(columns[3].parse::<f64>().unwrap()),
-			                     Rad(columns[4].parse::<f64>().unwrap())),
+			coords: LatLong::new(
+				Rad(columns[3].parse::<f64>().unwrap()),
+				Rad(columns[4].parse::<f64>().unwrap()),
+			),
 		};
 		cities.push(city);
 	}

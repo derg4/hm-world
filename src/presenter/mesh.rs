@@ -67,6 +67,7 @@ impl Mesh {
 			.unwrap(),
 		}
 	}
+	// TODO clean this up, it's unbelievably bad
 	pub fn gen_sphere_mesh<F: ?Sized>(facade: &F, deg_resolution: u32, radius: f64) -> Mesh
 	where
 		F: Facade,
@@ -139,7 +140,6 @@ impl Mesh {
 					0f64
 				};
 
-				// TODO: Make this more readable? It's a nightmare
 				if lat == 0 {
 					// First ring, 3 verts, one triangle for each lon
 					add_vertex(lat, lon, [0f64, 1f64, tex_id], &mut vertices);

@@ -1,5 +1,5 @@
-use image::{DynamicImage, FilterType, GenericImage, GenericImageView};
 use image::imageops;
+use image::{DynamicImage, FilterType, GenericImage, GenericImageView};
 
 use std::collections::HashMap;
 use std::fmt;
@@ -10,6 +10,16 @@ pub struct MapBounds {
 	pub max_lat: f64,
 	pub min_long: f64,
 	pub max_long: f64,
+}
+impl MapBounds {
+	pub fn new(min_lat: f64, max_lat: f64, min_long: f64, max_long: f64) -> MapBounds {
+		MapBounds {
+			min_lat: min_lat,
+			max_lat: max_lat,
+			min_long: min_long,
+			max_long: max_long,
+		}
+	}
 }
 
 #[derive(Eq, PartialEq, Hash, Debug)]
@@ -26,11 +36,12 @@ pub struct Map {
 	pub bounds: MapBounds,
 }
 impl Map {
-	pub fn new(world_name: &str,
-	           large_image: DynamicImage,
-	           missing_image: DynamicImage,
-	           bounds: MapBounds)
-	           -> Map {
+	pub fn new(
+		world_name: &str,
+		large_image: DynamicImage,
+		missing_image: DynamicImage,
+		bounds: MapBounds,
+	) -> Map {
 		Map {
 			world_name: world_name.to_string(),
 			image: large_image,
@@ -40,13 +51,16 @@ impl Map {
 	}
 
 	fn get_img_x_by_long(&self, long_deg: f64) -> i32 {
-		let px_per_deg_long = (self.image.width() as f64 - 1_f64) / (self.bounds.max_long - self.bounds.min_long);
+		let px_per_deg_long =
+			(self.image.width() as f64 - 1_f64) / (self.bounds.max_long - self.bounds.min_long);
 		((long_deg - self.bounds.min_long) * px_per_deg_long).round() as i32
 	}
 
 	fn get_img_y_by_lat(&self, lat_deg: f64) -> i32 {
-		let px_per_deg_lat = (self.image.height() as f64 - 1_f64) / (self.bounds.max_lat - self.bounds.min_lat);
-		self.image.height() as i32 - 1_i32 - ((lat_deg - self.bounds.min_lat) * px_per_deg_lat).round() as i32
+		let px_per_deg_lat =
+			(self.image.height() as f64 - 1_f64) / (self.bounds.max_lat - self.bounds.min_lat);
+		self.image.height() as i32
+			- 1_i32 - ((lat_deg - self.bounds.min_lat) * px_per_deg_lat).round() as i32
 	}
 
 	pub fn generate_textures(&mut self, tex_size_deg: u32) -> HashMap<MapPieceKey, DynamicImage> {
@@ -70,8 +84,11 @@ impl Map {
 			// If min x coord would be < 0, set to 0 and store the offset
 			let (subimage_min_x, offset_min_x) = {
 				let min = self.get_img_x_by_long(subimage_min_long);
-				if min < 0 { (0_u32, (-min) as u32) }
-				else { (min as u32, 0_u32) }
+				if min < 0 {
+					(0_u32, (-min) as u32)
+				} else {
+					(min as u32, 0_u32)
+				}
 			};
 
 			let subimage_max_long = subimage_min_long + tex_size_deg as f64;
@@ -79,18 +96,22 @@ impl Map {
 			// If max x coord would be > width, set to width and store the offset
 			let (subimage_max_x, offset_max_x) = {
 				let max = self.get_img_x_by_long(subimage_max_long);
-				if max > self.image.width() as i32 { (self.image.width(), (max as u32 - self.image.width())) }
-				else { (max as u32, 0_u32) }
+				if max > self.image.width() as i32 {
+					(self.image.width(), (max as u32 - self.image.width()))
+				} else {
+					(max as u32, 0_u32)
+				}
 			};
 			let subimage_width_px = subimage_max_x - subimage_min_x;
-			debug!("long incr={}, minlong x={}+{}, maxlong x={}, subimage w={}, img width={}",
+			debug!(
+				"long incr={}, minlong x={}+{}, maxlong x={}, subimage w={}, img width={}",
 				long_incr,
 				subimage_min_x,
 				offset_min_x,
 				subimage_max_long,
 				subimage_width_px,
-				self.image.width());
-
+				self.image.width()
+			);
 
 			for lat_incr in min_lat_incr..=max_lat_incr {
 				// Get y dimensions ...
@@ -99,8 +120,11 @@ impl Map {
 				// Also, min lat -> max y, because image coords are weird!
 				let (subimage_max_y, offset_max_y) = {
 					let max = self.get_img_y_by_lat(subimage_min_lat);
-					if max > self.image.height() as i32 { (self.image.height(), (max as u32 - self.image.height())) }
-					else { (max as u32, 0_u32) }
+					if max > self.image.height() as i32 {
+						(self.image.height(), (max as u32 - self.image.height()))
+					} else {
+						(max as u32, 0_u32)
+					}
 				};
 
 				let subimage_max_lat = subimage_min_lat + tex_size_deg as f64;
@@ -108,32 +132,50 @@ impl Map {
 				// Also, max lat -> min y, because image coords are weird!
 				let (subimage_min_y, offset_min_y) = {
 					let min = self.get_img_y_by_lat(subimage_max_lat);
-					if min < 0 { (0_u32, (-min) as u32) }
-					else { (min as u32, 0_u32) }
+					if min < 0 {
+						(0_u32, (-min) as u32)
+					} else {
+						(min as u32, 0_u32)
+					}
 				};
 				let subimage_height_px = subimage_max_y - subimage_min_y;
 
 				// Grab a view into image based on dimensions above
-				debug!("Subimage: minx={}, miny={}, w={}, h={}",
-					subimage_min_x, subimage_min_y, subimage_width_px, subimage_height_px);
-				let subimage = self.image.sub_image(subimage_min_x, subimage_min_y, subimage_width_px, subimage_height_px);
+				debug!(
+					"Subimage: minx={}, miny={}, w={}, h={}",
+					subimage_min_x, subimage_min_y, subimage_width_px, subimage_height_px
+				);
+				let subimage = self.image.sub_image(
+					subimage_min_x,
+					subimage_min_y,
+					subimage_width_px,
+					subimage_height_px,
+				);
 
 				// Set up missing_img (bottom layer)
 				let mut missing_img = self.missing_image.clone();
 
 				// Get the multipliers needed to bring subimage up to missing_img's size
-				let resize_x_mult = missing_img.width() as f64 / (subimage_width_px + offset_min_x + offset_max_x) as f64;
-				let resize_y_mult = missing_img.height() as f64 / (subimage_height_px + offset_min_y + offset_max_y) as f64;
+				let resize_x_mult = missing_img.width() as f64
+					/ (subimage_width_px + offset_min_x + offset_max_x) as f64;
+				let resize_y_mult = missing_img.height() as f64
+					/ (subimage_height_px + offset_min_y + offset_max_y) as f64;
 
 				// Resize subimage
 				let resize_to_x = (subimage_width_px as f64 * resize_x_mult).round() as u32;
 				let resize_to_y = (subimage_height_px as f64 * resize_y_mult).round() as u32;
-				let resized_subimage = imageops::resize(&subimage, resize_to_x, resize_to_y, FilterType::Lanczos3);
+				let resized_subimage =
+					imageops::resize(&subimage, resize_to_x, resize_to_y, FilterType::Lanczos3);
 
 				// Get offsets of subimage and overlay
 				let tex_x_offset = (offset_min_x as f64 * resize_x_mult).round() as u32;
 				let tex_y_offset = (offset_min_y as f64 * resize_y_mult).round() as u32;
-				imageops::overlay(&mut missing_img, &resized_subimage, tex_x_offset, tex_y_offset);
+				imageops::overlay(
+					&mut missing_img,
+					&resized_subimage,
+					tex_x_offset,
+					tex_y_offset,
+				);
 
 				// Store it and continue!
 				let map_piece_key = MapPieceKey {
@@ -148,9 +190,10 @@ impl Map {
 }
 impl fmt::Debug for Map {
 	fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-		write!(f,
-		       "Map{{image: <image from {}>, bounds: {:?}}}",
-		       self.world_name,
-		       self.bounds)
+		write!(
+			f,
+			"Map{{image: <image from {}>, bounds: {:?}}}",
+			self.world_name, self.bounds
+		)
 	}
 }
